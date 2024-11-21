@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { db } from './lib/db';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
-import { v4 as uuidv4 } from 'uuid';
+import IntroAnimation from './components/IntroAnimation';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -26,6 +26,7 @@ interface Page {
 }
 
 function App() {
+  const [showIntro, setShowIntro] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState('');
   const [darkMode, setDarkMode] = useState(false);
@@ -148,194 +149,198 @@ function App() {
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  if (!isAuthenticated) {
-    return <Auth onLogin={handleLogin} />;
-  }
-
-  if (showDashboard) {
-    return (
-      <Dashboard
-        userId={userId}
-        darkMode={darkMode}
-        pages={pages}
-        onBack={() => setShowDashboard(false)}
-        onPageSelect={handlePageSelect}
-        onLogout={handleLogout}
-      />
-    );
-  }
-
-  const currentPage = pages[currentPageIndex];
-
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-black' : 'bg-red-50'}`}>
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Title Section */}
-        <div className="mb-8">
-          {isEditingTitle ? (
-            <div className="relative">
-              <input
-                type="text"
-                value={currentPage?.title || ''}
-                onChange={(e) => {
-                  const newTitle = e.target.value.slice(0, 40); // Increased to 40 characters
-                  handleTitleChange(newTitle);
-                }}
-                onBlur={() => setIsEditingTitle(false)}
-                onKeyPress={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
-                className={`text-2xl font-bold w-full bg-transparent border-b-2 pr-16 ${
-                  darkMode ? 'text-red-500 border-red-900/20' : 'text-red-900 border-red-200'
-                } focus:outline-none`}
-                maxLength={40}
-                placeholder="Enter title (max 40 chars)"
-                autoFocus
-              />
-              <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-sm ${
-                darkMode ? 'text-red-500/50' : 'text-red-900/50'
-              }`}>
-                {(currentPage?.title || '').length}/40
-              </span>
-            </div>
-          ) : (
-            <h1
-              onClick={() => setIsEditingTitle(true)}
-              className={`text-2xl font-bold cursor-pointer hover:opacity-80 ${
-                darkMode ? 'text-red-500' : 'text-red-900'
-              }`}
-            >
-              {currentPage?.title || 'Untitled Page'}
-            </h1>
-          )}
-        </div>
-
-        {/* Content Area */}
-        <div className="relative w-full flex-grow">
-          <textarea
-            value={currentPage?.content || ''}
-            onChange={(e) => handleContentChange(e.target.value)}
-            className={`w-full min-h-[300px] md:h-[calc(100vh-20rem)] p-6 rounded-lg resize-none ${
-              darkMode ? 'bg-gray-900 text-red-400' : 'bg-white text-red-900'
-            } focus:outline-none font-${selectedFont}`}
-            style={{ color: textColor }}
-            placeholder="Start writing..."
+    <div className="h-screen w-screen overflow-hidden">
+      <AnimatePresence mode="wait">
+        {showIntro && (
+          <IntroAnimation onAnimationComplete={() => setShowIntro(false)} />
+        )}
+      </AnimatePresence>
+      
+      {!showIntro && (
+        !isAuthenticated ? (
+          <Auth onLogin={handleLogin} />
+        ) : showDashboard ? (
+          <Dashboard
+            userId={userId}
+            darkMode={darkMode}
+            pages={pages}
+            onBack={() => setShowDashboard(false)}
+            onPageSelect={handlePageSelect}
+            onLogout={handleLogout}
           />
-        </div>
+        ) : (
+          <div className={`min-h-screen ${darkMode ? 'bg-black' : 'bg-red-50'}`}>
+            <div className="max-w-4xl mx-auto px-4 py-8">
+              {/* Title Section */}
+              <div className="mb-8">
+                {isEditingTitle ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={pages[currentPageIndex]?.title || ''}
+                      onChange={(e) => {
+                        const newTitle = e.target.value.slice(0, 40); // Increased to 40 characters
+                        handleTitleChange(newTitle);
+                      }}
+                      onBlur={() => setIsEditingTitle(false)}
+                      onKeyPress={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
+                      className={`text-2xl font-bold w-full bg-transparent border-b-2 pr-16 ${
+                        darkMode ? 'text-red-500 border-red-900/20' : 'text-red-900 border-red-200'
+                      } focus:outline-none`}
+                      maxLength={40}
+                      placeholder="Enter title (max 40 chars)"
+                      autoFocus
+                    />
+                    <span className={`absolute right-0 top-1/2 -translate-y-1/2 text-sm ${
+                      darkMode ? 'text-red-500/50' : 'text-red-900/50'
+                    }`}>
+                      {(pages[currentPageIndex]?.title || '').length}/40
+                    </span>
+                  </div>
+                ) : (
+                  <h1
+                    onClick={() => setIsEditingTitle(true)}
+                    className={`text-2xl font-bold cursor-pointer hover:opacity-80 ${
+                      darkMode ? 'text-red-500' : 'text-red-900'
+                    }`}
+                  >
+                    {pages[currentPageIndex]?.title || 'Untitled Page'}
+                  </h1>
+                )}
+              </div>
 
-        {/* Bottom Fixed Container */}
-        <div className={`fixed bottom-0 left-0 right-0 z-50 ${
-          darkMode ? 'bg-black/90' : 'bg-red-50/90'
-        } backdrop-blur-md border-t ${
-          darkMode ? 'border-red-900/20' : 'border-red-200'
-        }`}>
-          {/* Navigation Controls */}
-          <div className="max-w-6xl mx-auto px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
-            {/* Page Navigation */}
-            <div className="flex items-center justify-center gap-2 w-full sm:w-auto">
-              <button
-                onClick={() => currentPageIndex > 0 && handlePageSelect(currentPageIndex - 1)}
-                disabled={currentPageIndex === 0}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${
-                  darkMode 
-                    ? currentPageIndex === 0 ? 'bg-red-900/10 text-red-900/20' : 'hover:bg-red-900/20 text-red-500'
-                    : currentPageIndex === 0 ? 'bg-red-200/50 text-red-900/20' : 'hover:bg-red-200 text-red-900'
-                }`}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className={`text-sm ${darkMode ? 'text-red-500' : 'text-red-900'}`}>
-                {currentPageIndex + 1} / {pages.length}
-              </span>
-              <button
-                onClick={() => currentPageIndex < pages.length - 1 && handlePageSelect(currentPageIndex + 1)}
-                disabled={currentPageIndex === pages.length - 1}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${
-                  darkMode 
-                    ? currentPageIndex === pages.length - 1 ? 'bg-red-900/10 text-red-900/20' : 'hover:bg-red-900/20 text-red-500'
-                    : currentPageIndex === pages.length - 1 ? 'bg-red-200/50 text-red-900/20' : 'hover:bg-red-200 text-red-900'
-                }`}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+              {/* Content Area */}
+              <div className="relative w-full flex-grow">
+                <textarea
+                  value={pages[currentPageIndex]?.content || ''}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  className={`w-full min-h-[300px] md:h-[calc(100vh-20rem)] p-6 rounded-lg resize-none ${
+                    darkMode ? 'bg-gray-900 text-red-400' : 'bg-white text-red-900'
+                  } focus:outline-none font-${selectedFont}`}
+                  style={{ color: textColor }}
+                  placeholder="Start writing..."
+                />
+              </div>
 
-            {/* Main Actions */}
-            <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
-              <button
-                onClick={() => setShowDashboard(true)}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
-                  darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
-                }`}
-                title="Dashboard"
-              >
-                <LayoutGrid className="w-5 h-5" />
-                <span className="sr-only">Dashboard</span>
-              </button>
-              <button
-                onClick={handleNewPage}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
-                  darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
-                }`}
-                title="New Page"
-              >
-                <FilePlus className="w-5 h-5" />
-                <span className="sr-only">New Page</span>
-              </button>
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
-                  darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
-                }`}
-                title="Settings"
-              >
-                <Settings2 className="w-5 h-5" />
-                <span className="sr-only">Settings</span>
-              </button>
-              <button
-                onClick={handleSave}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
-                  darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
-                }`}
-                title="Save"
-              >
-                <Save className="w-5 h-5" />
-                <span className="sr-only">Save</span>
-              </button>
-              <button
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
-                  darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
-                }`}
-                title={darkMode ? 'Light Mode' : 'Dark Mode'}
-              >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                <span className="sr-only">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-              </button>
-              <button
-                onClick={handleLogout}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
-                  darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
-                }`}
-                title="Logout"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="sr-only">Logout</span>
-              </button>
+              {/* Bottom Fixed Container */}
+              <div className={`fixed bottom-0 left-0 right-0 z-50 ${
+                darkMode ? 'bg-black/90' : 'bg-red-50/90'
+              } backdrop-blur-md border-t ${
+                darkMode ? 'border-red-900/20' : 'border-red-200'
+              }`}>
+                {/* Navigation Controls */}
+                <div className="max-w-6xl mx-auto px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+                  {/* Page Navigation */}
+                  <div className="flex items-center justify-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => currentPageIndex > 0 && handlePageSelect(currentPageIndex - 1)}
+                      disabled={currentPageIndex === 0}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${
+                        darkMode 
+                          ? currentPageIndex === 0 ? 'bg-red-900/10 text-red-900/20' : 'hover:bg-red-900/20 text-red-500'
+                          : currentPageIndex === 0 ? 'bg-red-200/50 text-red-900/20' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <span className={`text-sm ${darkMode ? 'text-red-500' : 'text-red-900'}`}>
+                      {currentPageIndex + 1} / {pages.length}
+                    </span>
+                    <button
+                      onClick={() => currentPageIndex < pages.length - 1 && handlePageSelect(currentPageIndex + 1)}
+                      disabled={currentPageIndex === pages.length - 1}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${
+                        darkMode 
+                          ? currentPageIndex === pages.length - 1 ? 'bg-red-900/10 text-red-900/20' : 'hover:bg-red-900/20 text-red-500'
+                          : currentPageIndex === pages.length - 1 ? 'bg-red-200/50 text-red-900/20' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Main Actions */}
+                  <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => setShowDashboard(true)}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+                        darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                      title="Dashboard"
+                    >
+                      <LayoutGrid className="w-5 h-5" />
+                      <span className="sr-only">Dashboard</span>
+                    </button>
+                    <button
+                      onClick={handleNewPage}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+                        darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                      title="New Page"
+                    >
+                      <FilePlus className="w-5 h-5" />
+                      <span className="sr-only">New Page</span>
+                    </button>
+                    <button
+                      onClick={() => setShowSettings(!showSettings)}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+                        darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                      title="Settings"
+                    >
+                      <Settings2 className="w-5 h-5" />
+                      <span className="sr-only">Settings</span>
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+                        darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                      title="Save"
+                    >
+                      <Save className="w-5 h-5" />
+                      <span className="sr-only">Save</span>
+                    </button>
+                    <button
+                      onClick={toggleDarkMode}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+                        darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                      title={darkMode ? 'Light Mode' : 'Dark Mode'}
+                    >
+                      {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                      <span className="sr-only">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+                        darkMode ? 'hover:bg-red-900/20 text-red-500' : 'hover:bg-red-200 text-red-900'
+                      }`}
+                      title="Logout"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      <span className="sr-only">Logout</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <AnimatePresence mode="wait">
+                {showSettings && (
+                  <Settings
+                    onClose={() => setShowSettings(false)}
+                    selectedFont={selectedFont}
+                    setSelectedFont={setSelectedFont}
+                    textColor={textColor}
+                    setTextColor={setTextColor}
+                  />
+                )}
+              </AnimatePresence>
             </div>
           </div>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {showSettings && (
-            <Settings
-              onClose={() => setShowSettings(false)}
-              selectedFont={selectedFont}
-              setSelectedFont={setSelectedFont}
-              textColor={textColor}
-              setTextColor={setTextColor}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+        )
+      )}
     </div>
   );
 }
